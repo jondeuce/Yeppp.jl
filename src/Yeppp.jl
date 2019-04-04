@@ -21,12 +21,12 @@ function release()
     status != 0 && error("yepLibrary_Release: error: ", status)
 end
 
-checkcontigous(A::DenseArray) = true
+_iscontiguous(A::DenseArray) = true
 # Fallback
-checkcontigous(A::StridedArray) = false
+_iscontiguous(A::StridedArray) = false
 # Cases we can verify
-checkcontigous(A::SubArray) = Base.iscontiguous(A)
-checkcontigous(A::StridedVector) = stride(A,1) == 1
+_iscontiguous(A::SubArray) = Base.iscontiguous(A)
+_iscontiguous(A::StridedVector) = stride(A,1) == 1
 
 macro yepppfunsAA_A(fname, libname, BT)
     errorname = libname * ": error: "
@@ -36,7 +36,7 @@ macro yepppfunsAA_A(fname, libname, BT)
             n = length(x)
             @assert(n == length(y) == length(res))
             @assert !Base.has_offset_axes(res, x, y)
-            @assert checkcontigous(res) && checkcontigous(x) && checkcontigous(y) "could not verify that arguments are contigous is memory"
+            @assert _iscontiguous(res) && _iscontiguous(x) && _iscontiguous(y) "could not verify that arguments are contigous is memory"
 
             status = ccall( ($(libname), libyeppp), Cint, (Ptr{$(BT)}, Ptr{$(BT)}, Ptr{$(BT)}, Culong), x, y, res, n)
             status != 0 && error($(errorname), status)
@@ -53,7 +53,7 @@ macro yepppfunsA_A(fname, libname, BT)
             n = length(x)
             @assert(n == length(res))
             @assert !Base.has_offset_axes(res, x)
-            @assert checkcontigous(res) && checkcontigous(x) "could not verify that arguments are contigous is memory"
+            @assert _iscontiguous(res) && _iscontiguous(x) "could not verify that arguments are contigous is memory"
 
             status = ccall( ($(libname), libyeppp), Cint, (Ptr{$(BT)}, Ptr{$(BT)}, Culong), x, res, n)
             status != 0 && error($(errorname), status)
@@ -69,7 +69,7 @@ macro yepppfunsA_S(fname, libname, BT)
         function $(fname)(x::Union{DenseArray{$(BT)},StridedArray{$(BT)}})
             n = length(x)
             @assert !Base.has_offset_axes(x)
-            @assert checkcontigous(x) "could not verify that arguments are contigous is memory"
+            @assert _iscontiguous(x) "could not verify that arguments are contigous is memory"
             res = Ref{$BT}()
             status = ccall( ($(libname), libyeppp), Cint, (Ptr{$(BT)}, Ptr{$(BT)}, Culong), x, res, n)
             status != 0 && error($(errorname), status)
@@ -115,7 +115,7 @@ function dot(x::Union{DenseVector{Float64},StridedVector{Float64}}, y::Union{Den
     n = length(x)
     @assert(n == length(y))
     @assert !Base.has_offset_axes(x, y)
-    @assert checkcontigous(x) && checkcontigous(y)
+    @assert _iscontiguous(x) && _iscontiguous(y)
 
     dotproduct = Ref{Float64}()
     status = ccall( (:yepCore_DotProduct_V64fV64f_S64f, libyeppp), Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Culong), x, y, dotproduct, n)
@@ -132,7 +132,7 @@ function dot(x::Union{DenseVector{Float32},StridedVector{Float32}}, y::Union{Den
     n = length(x)
     @assert(n == length(y))
     @assert !Base.has_offset_axes(x, y)
-    @assert checkcontigous(x) && checkcontigous(y)
+    @assert _iscontiguous(x) && _iscontiguous(y)
 
     dotproduct = Ref{Float32}()
     status = ccall( (:yepCore_DotProduct_V32fV32f_S32f, libyeppp), Cint, (Ptr{Float32}, Ptr{Float32}, Ptr{Float32}, Culong), x, y, dotproduct, n)
@@ -159,7 +159,7 @@ function evalpoly!(res::Union{DenseArray{Float64},StridedVector{Float64}}, coef:
     arraysize = length(x)
     @assert(arraysize == length(res))
     @assert !Base.has_offset_axes(res, coef, x)
-    @assert checkcontigous(res) && checkcontigous(coef) && checkcontigous(x)
+    @assert _iscontiguous(res) && _iscontiguous(coef) && _iscontiguous(x)
 
     status = ccall( (:yepMath_EvaluatePolynomial_V64fV64f_V64f, libyeppp), Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Culong, Culong), coef, x, res, n, arraysize)
     status != 0 && error("yepMath_EvaluatePolynomial_V64fV64f_V64f: error: ", status)
