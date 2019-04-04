@@ -1,5 +1,5 @@
 module test_evalpoly
-using Yeppp
+using Yeppp, Printf
 
 const c0 =    1.53270461724076346
 const c1 =    1.45339856462100293
@@ -115,7 +115,7 @@ const coeff = [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10,
                c91, c92, c93, c94, c95, c96, c97, c98, c99, c100]
 
 
-function horner!(xv::Vector{Float64}, y::Vector{Float64})
+function horner!(xv::AbstractArray{Float64}, y::AbstractArray{Float64})
     for i in 1:length(xv)
         x = xv[i]
         y[i] =  c0 + x * (c1 + x * (c2 + x * (c3 + x * (c4 + x * (c5 + x * (c6 + x * (c7 + x * (c8 + x * (c9 + x * (c10 + x * (c11 +
@@ -132,7 +132,7 @@ function horner!(xv::Vector{Float64}, y::Vector{Float64})
     end
 end
 
-function horner_gen!(coef::Vector{Float64}, x::Vector{Float64}, y::Vector{Float64})
+function horner_gen!(coef::AbstractArray{Float64}, x::AbstractArray{Float64}, y::AbstractArray{Float64})
   n = length(x)
   ncoef = length(coef)
   for i in 1:n
@@ -146,7 +146,7 @@ function horner_gen!(coef::Vector{Float64}, x::Vector{Float64}, y::Vector{Float6
 end
 
 function runtest(n::Int = 10^7)
-    x = collect(linspace(0,1,n))
+    x = collect(range(0,1,length=n))
     y1 = zeros(n)
     y2 = zeros(n)
     y3 = zeros(n)
@@ -156,11 +156,30 @@ function runtest(n::Int = 10^7)
     thorner2 = @elapsed horner_gen!(coeff, x, y3)
 
     @printf "Evalpoly test, size %d\n" n
-    @printf "Yeppp time: %f. Error relative to horner_gen!: %e.\n" tyeppp sqrt(sumabs2(y3-y1))
-    @printf "Explicit Horner method: %f. Error relative to horner_gen!: %e\n" thorner sqrt(sumabs2(y3-y1))
+    @printf "Yeppp time: %f. Error relative to horner_gen!: %e.\n" tyeppp sqrt(sum(abs2,y3-y1))
+    @printf "Explicit Horner method: %f. Error relative to horner_gen!: %e\n" thorner sqrt(sum(abs2,y3-y1))
     @printf "General Horner method: %f\n" thorner2
 
 end
+
+function runtest_view()
+    n = 10^7
+    x = collect(range(0,1,length=n))[1:n-400]
+    y1 = view(zeros(n), 101:n-300)
+    y2 = view(zeros(n), 201:n-200)
+    y3 = view(zeros(n), 301:n-100)
+
+    tyeppp = @elapsed Yeppp.evalpoly!(y1, coeff, x)
+    thorner = @elapsed horner!(x, y2)
+    thorner2 = @elapsed horner_gen!(coeff, x, y3)
+
+    @printf "Evalpoly test, size %d\n" n
+    @printf "Yeppp time using views: %f. Error relative to horner_gen!: %e.\n" tyeppp sqrt(sum(abs2,y3-y1))
+    @printf "Explicit Horner method using views: %f. Error relative to horner_gen!: %e\n" thorner sqrt(sum(abs2,y3-y1))
+    @printf "General Horner method using views: %f\n" thorner2
+
+end
 runtest()
+runtest_view()
 
 end
